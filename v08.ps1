@@ -87,3 +87,7 @@ $passwordPlain = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([Syst
 
 # Invoke the Get-Certificates function
 Get-Certificates -ip $ip -username $username -password $passwordPlain
+
+
+# End of the script
+Read-Host "Press Enter to exit"
