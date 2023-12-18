@@ -1,5 +1,6 @@
 # Written by Enrico Jost, December 2023
 # Version 0.8 - stil BETA
+# GNU General Public License v3.0
 
 # Still work in progress :
 # Only tested for HTTP connection, HTTPS in progress
