@@ -16,3 +16,6 @@ The REST response for such a request is in base64 encoding, hence why the script
 Makes it "human readable" and shares the output for following certificate details: 
 
 Issuer, Subject, NotBefore, NotAfter
+
+
+## published under GNU General Public License v3.0
