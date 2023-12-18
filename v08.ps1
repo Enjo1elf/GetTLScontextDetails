@@ -1,9 +1,12 @@
-﻿
-#Written by Enrico Jost, December 2023
-#Version 0.8
-#Still work in progress
-##Descriptions in progress
-##Only tested for HTTP connection, HTTPS in progress
+
+# Written by Enrico Jost, December 2023
+# Version 0.8 - stil BETA
+
+# Still work in progress
+# Features planned: GUI to choose between HTTP/HTTPS
+# GUI is going to include a choice between individual TLS-contexts or all of them
+# Different output options in planning
+# Only tested for HTTP connection, HTTPS in progress
 
 # Function to extract and store certificates from API responses
 function Get-Certificates {
@@ -13,11 +16,11 @@ function Get-Certificates {
         [string]$password
     )
 
-    # Get Authorization Header
+    # Build Authorization Header
     $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("${username}:${password}")))
     $AuthorizationHeader = "Basic $base64AuthInfo"
 
-    # Get TLS contexts from the config
+    # Get TLS contexts from the INI file
     try {
         $configResponse = Invoke-RestMethod -Uri "http://${ip}/api/v1/files/ini" -Headers @{ 'Authorization' = $AuthorizationHeader } -ErrorAction Stop
     } catch {
@@ -26,7 +29,7 @@ function Get-Certificates {
     }
 
     if ($configResponse) {
-        # Extract TLS contexts using a more robust method
+        # Extract TLS contexts using regex
         $tlsContexts = $configResponse -split '\r?\n' | Where-Object { $_ -match 'TLSContexts (\d+)' } | ForEach-Object { $matches[1] }
     } else {
         Write-Host "Error getting TLS contexts from the config."
@@ -60,6 +63,7 @@ function Get-Certificates {
 
                 # Output information about the stored certificate
                 Write-Output "Stored cert for TLS context $($tlsContext):"
+                
                 Write-Output $certContent
 
                 # Decode and display certificate information
