@@ -6,6 +6,7 @@
 # Only tested for HTTP connection, HTTPS in progress
 
 # Features planned: 
+# Input via csv file
 # GUI to choose between HTTP/HTTPS
 # GUI is going to include a choice between individual TLS-contexts or all of them
 # Different output options in planning
