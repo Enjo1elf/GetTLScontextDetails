@@ -7,6 +7,7 @@
 # Version 0.9 : Added HTTP-HTTPS choice as well as certificate validation skipping (Credits to Bjorn Van Leemput - AudioCodes)
 
 # Features planned:
+# Display due date for cert validity in days
 # Input via csv file
 # GUI to choose between HTTP/HTTPS
 # GUI is going to include a choice between individual TLS-contexts or all of them
