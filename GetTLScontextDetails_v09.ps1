@@ -156,15 +156,27 @@ function Get-Certificates {
                 
                 Write-Output $certContent
 
-                # Decode and display certificate information
-                $certBase64 = $certContent
-                $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]([System.Convert]::FromBase64String($certBase64))
-                $cert | Select-Object Issuer, Subject, NotBefore, NotAfter | Format-List *
-            } else {
-                Write-Output "Certificate content not found for TLS context $($tlsContext)"
-            }
+                 # Decode and display certificate information
+            $certBase64 = $certContent
+            $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]([System.Convert]::FromBase64String($certBase64))
+
+            # Store the "NotAfter" attribute in expiresCount variable
+            $Expiration = $cert.NotAfter
+
+            # Calculate remaining days until the certificate expires
+            $daysUntilExpiration = ($Expiration - (Get-Date)).Days
+
+            # Output information about the stored certificate with remaining days
+            Write-Output "Stored cert for TLS context $($tlsContext):"
+            Write-Output $certContent
+            Write-Output "Certificate expires in $daysUntilExpiration days."
+
+            $cert | Select-Object Issuer, Subject, NotBefore, NotAfter | Format-List *
+        } else {
+            Write-Output "Certificate content not found for TLS context $($tlsContext)"
         }
     }
+}
 }
 
 # Get user input for HTTP or HTTPS
