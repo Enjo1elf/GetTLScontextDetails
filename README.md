@@ -1,21 +1,15 @@
 # GetTLScontextDetails
 
-A Powershell script to connect to an AudioCodes SBC and receive readable certificate details.
+ GetTLScontextDetails Script to receive details about every configured TLS context (cert) on an AudioCodes SBC - utilizing REST API via HTTP or HTTPS.#
+ 
+ This Script will ask for IP address of the SBC, give a choice for connection type and needs user credentials for a REST API permitted user.
+ 
+ It will login to the SBC, grab the full INI file and parse it. It will store all configured TLS context indexes into variables.
+ It will build REST API requests to receive the full certificate (base64 encoded) from the AudioCodes SBC - which it stores again.
+ 
+ Afterwards it will convert these inputs into human readable outputs and will show the details for: Issuer, Subject, NotBefore, NotAfter
+ ... as well as a calculated expiration time in days for each and every certificate.
 
-
-The script will connect to the AudioCodes SBC and request the FULL ini via REST-API.
-
-Afterwards the script will go through the INI, searching for TLScontexts.
-
-Each TLScontext #index number will be stored in a variable and will be used to create REST-API URLs.
-
-These URLs are used to request certificate information for each and every configured TLS context.
-
-The REST response for such a request is in base64 encoding, hence why the script stores it in new variables - and as last step:
-
-Makes it "human readable" and shares the output for following certificate details: 
-
-Issuer, Subject, NotBefore, NotAfter
 
 
 ## published under GNU General Public License v3.0
