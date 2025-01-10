@@ -1,14 +1,14 @@
 # Written by Enrico Jost, December 2023
-# Version 0.9.5 - BETA
+# Version 0.9.6 - BETA
 # GNU General Public License v3.0
 
 # Versions 0.1 - 0.7 : initial codings, review, re-designs
 # Version 0.8 : Working script, only HTTP without choice of protocol
 # Version 0.9 : Added HTTP-HTTPS choice as well as certificate validation skipping (Credits to Bjorn Van Leemput - AudioCodes)
 # Version 0.9.5 : Added Expiration calculation based on cert property NotAfter + current date, adjusted script output to display it
+# Version 0.9.6 : Added SBC-input via CSV, Added Output via CSV - including device-IP, CN, expiration date, TLS Context number (will do multiple lines if multiple TLS contexts exist)
 
 # Features planned:
-# Input via csv file
 # GUI to choose between HTTP/HTTPS
 # GUI is going to include a choice between individual TLS-contexts or all of them
 # Different output options in planning
@@ -92,6 +92,9 @@ function Get-Certificates {
         return $null
     }
 
+    # Initialize an array to store CNs, expiration dates, and TLS Context for each IP
+    $cnList = @()
+
     # Loop through each TLS context
     foreach ($tlsContext in $tlsContexts) {
         $endpoint = "/api/v1/files/tls/$tlsContext/certificate"
@@ -145,66 +148,70 @@ function Get-Certificates {
                 # Remove leading/trailing whitespaces
                 $certContent = $certContent.Trim()
 
-                # Define variable name
-                $variableName = "Response${endpoint -replace '/','-'}"
+                # Decode the certificate content and extract the CN and expiration date
+                $certBase64 = $certContent
+                $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]([System.Convert]::FromBase64String($certBase64))
 
-                # Store certificate content in the variable
-                Set-Variable -Name $variableName -Value $certContent
+                # Extract the CN (Common Name) from the certificate's Subject field
+                $subject = $cert.Subject
+                $cnMatch = $subject -match "CN=([^\s,]+)"
+                if ($cnMatch) {
+                    $cn = $matches[1] # CN is captured in $matches[1]
+                    # Get the NotAfter (expiration date)
+                    $notAfter = $cert.NotAfter
 
-
-            # Decode and display certificate information
-            $certBase64 = $certContent
-            $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]([System.Convert]::FromBase64String($certBase64))
-
-            # Store the "NotAfter" attribute in expiresCount variable
-            $Expiration = $cert.NotAfter
-
-            # Calculate remaining days until the certificate expires
-            $daysUntilExpiration = ($Expiration - (Get-Date)).Days
-
-            # Output information about the stored certificate with remaining days
-            Write-Output "Stored cert for TLS context $($tlsContext):"
-            Write-Output $certContent
-           
-
-            $cert | Select-Object Issuer, Subject, NotBefore, NotAfter | Format-List *
-			
-			Write-Output "Certificate expires in $daysUntilExpiration days." `n
-			 
+                    # Store the CN along with the IP, expiration date, and TLS context index
+                    $cnList += [PSCustomObject]@{
+                        IP = $ip
+                        CN = $cn
+                        ExpirationDate = $notAfter
+                        TLSContext = $tlsContext
+                    }
+                } else {
+                    Write-Output "CN not found in the certificate for TLS context $($tlsContext)"
+                }
+            }
         } else {
             Write-Output "Certificate content not found for TLS context $($tlsContext)"
         }
     }
-}
-}
 
-# Get user input for HTTP or HTTPS
-$useHttps = Read-Host "Choose protocol:`n1. HTTP`n2. HTTPS`nEnter '1' for HTTP or '2' for HTTPS"
-
-# Validate user input
-if ($useHttps -eq '1' -or $useHttps -eq '2') {
-    $useHttps = ($useHttps -eq '2')
-} else {
-    Write-Host "Invalid choice. Defaulting to HTTP."
-    $useHttps = $false
+    return $cnList
 }
 
-# Get user input
-$ip = Read-Host "Enter SBC IP address"
-$username = Read-Host "Enter username"
-$password = Read-Host -Prompt "Enter password" -AsSecureString
-
-# Convert SecureString to plain text password
-$passwordPlain = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password))
-
-# Invoke the Get-Certificates function
-$certificates = Get-Certificates -ip $ip -username $username -password $passwordPlain -useHttps $useHttps
-
-# Output TLS contexts
-if ($certificates) {
-    Write-Host "TLS Contexts:" `n
-    $certificates
+# Read CSV file for input
+$csvFilePath = Read-Host "Enter the path to the CSV file (e.g., C:\path\to\file.csv)"
+if (-not (Test-Path $csvFilePath)) {
+    Write-Host "CSV file not found at the specified path. Exiting."
+    exit
 }
 
-# End of the script
+# Import CSV and loop through each row
+$csvData = Import-Csv -Path $csvFilePath
+$allCNs = @()
+
+foreach ($row in $csvData) {
+    # Get protocol choice based on CSV data
+    $useHttps = if ($row.Protocol -eq "HTTPS") { $true } else { $false }
+
+    # Get user input for IP, username, password from CSV
+    $ip = $row.IP
+    $username = $row.Username
+    $password = $row.Password
+
+    # Invoke the Get-Certificates function for each entry
+    Write-Host "Processing IP: $ip (Protocol: $($row.Protocol))"
+    $cnList = Get-Certificates -ip $ip -username $username -password $password -useHttps $useHttps
+
+    # Add the CNs, expiration dates, and TLS contexts to the overall list
+    $allCNs += $cnList
+}
+
+# Define the output CSV file path (same as input but with 'export' suffix)
+$exportCsvPath = [System.IO.Path]::Combine([System.IO.Path]::GetDirectoryName($csvFilePath), 'export.csv')
+
+# Export the results to CSV
+$allCNs | Export-Csv -Path $exportCsvPath -NoTypeInformation
+
+Write-Host "Export complete. Data saved to $exportCsvPath"
 Read-Host "Press Enter to exit"
